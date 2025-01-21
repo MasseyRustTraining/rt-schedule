@@ -20,6 +20,7 @@ impl core::error::Error for SchedulerError {}
 pub trait Task: core::fmt::Debug {
     fn run(&self);
     fn duration(&self) -> i64;
+    fn is_running(&self) -> bool;
 }
 
 #[derive(Debug)]
@@ -68,6 +69,13 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
             }
             v.start_time -= 1;
         }
+
+        if let Some(t) = self.running {
+            if !t.is_running() {
+                self.running = None;
+            }
+        }
+
         if self.running.is_none() {
             let next_task = self
                 .tasks
@@ -82,10 +90,11 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
                 self.running = Some(t.task);
             }
         }
+        
         Ok(())
     }
 
-    pub fn now() -> i64 {
+    pub fn now(&self) -> i64 {
         self.now
     }
 }
