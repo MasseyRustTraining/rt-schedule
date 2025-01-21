@@ -17,25 +17,25 @@ impl core::fmt::Display for SchedulerError {
 
 impl core::error::Error for SchedulerError {}
 
-pub trait Task: core::fmt::Debug {
-    fn run(&self);
+pub trait Task {
+    fn run(&mut self, now: i64);
+    fn start_time(&self) -> i64;
     fn duration(&self) -> i64;
-    fn is_running(&self) -> bool;
+    fn is_running(&self, now: i64) -> bool;
 }
 
-#[derive(Debug)]
 struct TaskEntry<'a> {
     start_time: i64,
-    task: &'a dyn Task,
+    task: &'a mut dyn Task,
 }
 
 impl<'a> TaskEntry<'a> {
-    fn new(start_time: i64, task: &'a dyn Task) -> Self {
+    fn new(start_time: i64, task: &'a mut dyn Task) -> Self {
         Self { start_time, task }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Scheduler<'a, const NQUEUE: usize> {
     // `heapless` Vec of trait objects?
     tasks: Vec<TaskEntry<'a>, NQUEUE>,
@@ -49,16 +49,17 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
         Self::default()
     }
 
-    pub fn add_task(&mut self, t: &'a dyn Task, start_time: i64) ->
+    pub fn add_task(&mut self, t: &'a mut dyn Task) ->
         Result<(), SchedulerError>
     {
+        let start_time = t.start_time();
         if start_time >= self.now {
             return Err(SchedulerError::LateStart);
         }
         if self.tasks.is_full() {
             return Err(SchedulerError::ScheduleFull);
         }
-        self.tasks.push(TaskEntry::new(start_time, t)).unwrap();
+        self.tasks.push(TaskEntry::new(start_time, t)).map_err(|_| "task queue full").unwrap();
         Ok(())
     }
 
@@ -71,7 +72,7 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
         }
 
         if let Some(t) = self.running {
-            if !t.is_running() {
+            if !t.is_running(self.now) {
                 self.running = None;
             }
         }
@@ -86,7 +87,7 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
                 });
             if let Some((i, _)) = next_task {
                 let t = self.tasks.swap_remove(i);
-                t.task.run();
+                t.task.run(self.now);
                 self.running = Some(t.task);
             }
         }
