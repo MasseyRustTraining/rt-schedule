@@ -1,30 +1,39 @@
 use rt_schedule::*;
 
-struct DemoTask<T> {
-    start_time: i64,
-    run_time: i64,
-    duration: i64,
-    runner: T,
-}
-
-fn new_task(
-    start_time: i64,
-    duration: i64,
+struct DemoTask {
     id: usize,
-) -> DemoTask<impl FnMut(i64)> {
-    let runner = move |run_time| {
-        if run_time > start_time {
-            println!("task {}: starting late ({} < {})", id, start_time, run_time);
-        }
-        println!("task {}: start {}, duration {}", id, run_time, duration);
-    };
-    DemoTask { start_time, run_time: 0, duration, runner }
+    start_time: i64,
+    run_time: Option<i64>,
+    duration: i64,
 }
 
-impl<T: FnMut(i64)> Task for DemoTask<T> {
+impl DemoTask {
+    fn new ( start_time: i64, duration: i64, id: usize, ) -> Self {
+        Self { id, start_time, run_time: None, duration }
+    }
+
+    fn run(&mut self, run_time: i64) {
+        self.run_time = Some(run_time);
+        if run_time > self.start_time {
+            println!(
+                "task {}: starting late ({} < {})",
+                self.id,
+                self.start_time,
+                run_time,
+            );
+        }
+        println!(
+            "task {}: start {}, duration {}",
+            self.id,
+            run_time,
+            self.duration,
+        );
+    }        
+}
+
+impl Task for DemoTask {
     fn run(&mut self, now: i64) {
-        self.run_time = now;
-        (self.runner)(now);
+        self.run(now);
     }
 
     fn start_time(&self) -> i64 {
@@ -36,18 +45,23 @@ impl<T: FnMut(i64)> Task for DemoTask<T> {
     }
 
     fn is_running(&self, now: i64) -> bool {
-        now - self.run_time < self.duration
+        if let Some(run_time) = self.run_time {
+            now - run_time < self.duration
+        } else {
+            panic!("is_running on not-yet-started task")
+        }
     }
 }
 
 fn main() {
-    let mut t0 = new_task(1, 3, 0);
-    let mut t1 = new_task(1, 3, 1);
-    let mut t2 = new_task(4, 1, 2);
-    let mut t3 = new_task(9, 1, 3);
-    let tasks: [&mut dyn Task; 4] = [&mut t0, &mut t1, &mut t2, &mut t3];
+    let mut tasks = [
+        DemoTask::new(1, 3, 0),
+        DemoTask::new(1, 3, 1),
+        DemoTask::new(4, 1, 2),
+        DemoTask::new(9, 1, 3),
+    ];
     let mut scheduler: Scheduler<4> = Scheduler::new();
-    for t in tasks {
+    for t in &mut tasks {
         scheduler.add_task(t).unwrap();
     }
     for i in 0..10 {
