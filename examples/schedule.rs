@@ -41,12 +41,16 @@ impl<T: FnMut(i64)> Task for DemoTask<T> {
 }
 
 fn main() {
-    let mut t0 = new_task(0, 2, 0);
-    let mut t1 = new_task(0, 1, 1);
+    let mut t0 = new_task(1, 2, 0);
+    let mut t1 = new_task(1, 1, 1);
     let mut t2 = new_task(4, 1, 2);
     let tasks: [&mut dyn Task; 3] = [&mut t0, &mut t1, &mut t2];
     let mut scheduler: Scheduler<3> = Scheduler::new();
     for t in tasks {
         scheduler.add_task(t).unwrap();
+    }
+    for i in 0..7 {
+        println!("tick {}", i);
+        scheduler.tick().unwrap();
     }
 }
