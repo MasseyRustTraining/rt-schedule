@@ -41,8 +41,9 @@ fn main() {
     let mut t0 = new_task(1, 3, 0);
     let mut t1 = new_task(1, 3, 1);
     let mut t2 = new_task(4, 1, 2);
-    let tasks: [&mut dyn Task; 3] = [&mut t0, &mut t1, &mut t2];
-    let mut scheduler: Scheduler<3> = Scheduler::new();
+    let mut t3 = new_task(9, 1, 3);
+    let tasks: [&mut dyn Task; 4] = [&mut t0, &mut t1, &mut t2, &mut t3];
+    let mut scheduler: Scheduler<4> = Scheduler::new();
     for t in tasks {
         scheduler.add_task(t).unwrap();
     }

@@ -36,10 +36,8 @@ impl<'a> TaskEntry<'a> {
 
 #[derive(Default)]
 pub struct Scheduler<'a, const NQUEUE: usize> {
-    // `heapless` Vec of trait objects?
     tasks: Vec<TaskEntry<'a>, NQUEUE>,
     now: i64,
-    // What information on running task is needed?
     running: Option<&'a dyn Task>,
 }
 
@@ -74,18 +72,19 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
         }
 
         if self.running.is_none() {
-            let next_task = self
-                .tasks
+            let next_task = self.tasks
                 .iter()
                 .enumerate()
                 .min_by_key(|(_, t)| {
                     (t.start_time, t.task.duration())
                 });
 
-            if let Some((i, _)) = next_task {
-                let t = self.tasks.swap_remove(i);
-                t.task.run(self.now);
-                self.running = Some(t.task);
+            if let Some((i, t)) = next_task {
+                if t.start_time <= self.now {
+                    let t = self.tasks.swap_remove(i);
+                    t.task.run(self.now);
+                    self.running = Some(t.task);
+                }
             }
         }
     }
