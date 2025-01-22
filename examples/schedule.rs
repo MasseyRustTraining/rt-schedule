@@ -13,6 +13,9 @@ fn new_task(
     id: usize,
 ) -> DemoTask<impl FnMut(i64)> {
     let runner = move |run_time| {
+        if run_time > start_time {
+            println!("task {}: starting late ({} < {})", id, start_time, run_time);
+        }
         println!("task {}: start {}, duration {}", id, run_time, duration);
     };
     DemoTask { start_time, run_time: 0, duration, runner }
