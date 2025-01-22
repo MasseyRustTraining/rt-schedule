@@ -6,7 +6,6 @@ use heapless::Vec;
 pub enum SchedulerError {
     LateStart,
     ScheduleFull,
-    StuckTask,
 }
 
 impl core::fmt::Display for SchedulerError {
@@ -65,13 +64,8 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
         Ok(())
     }
 
-    pub fn tick(&mut self) -> Result<(), SchedulerError> {
-        for v in &mut self.tasks {
-            if v.start_time == i64::MIN {
-                return Err(SchedulerError::StuckTask);
-            }
-            v.start_time -= 1;
-        }
+    pub fn tick(&mut self) {
+        self.now += 1;
 
         if let Some(t) = self.running {
             if !t.is_running(self.now) {
@@ -87,14 +81,13 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
                 .min_by_key(|(_, t)| {
                     (t.start_time, t.task.duration())
                 });
+
             if let Some((i, _)) = next_task {
                 let t = self.tasks.swap_remove(i);
                 t.task.run(self.now);
                 self.running = Some(t.task);
             }
         }
-        
-        Ok(())
     }
 
     pub fn now(&self) -> i64 {
