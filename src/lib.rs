@@ -53,13 +53,15 @@ impl<'a, const NQUEUE: usize> Scheduler<'a, NQUEUE> {
         Result<(), SchedulerError>
     {
         let start_time = t.start_time();
-        if start_time >= self.now {
+        if start_time <= self.now {
             return Err(SchedulerError::LateStart);
         }
         if self.tasks.is_full() {
             return Err(SchedulerError::ScheduleFull);
         }
-        self.tasks.push(TaskEntry::new(start_time, t)).map_err(|_| "task queue full").unwrap();
+        self.tasks.push(TaskEntry::new(start_time, t))
+            .map_err(|_| "task queue full")
+            .unwrap();
         Ok(())
     }
 
